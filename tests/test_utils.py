@@ -6,7 +6,13 @@ from unittest.mock import mock_open, patch
 import pandas as pd
 import pytest
 
-from src.utils import get_cards, get_currency_rates, get_greeting, get_stock_prices, get_top_transactions, read_excel
+from src.utils import (get_cards,
+                       get_currency_rates,
+                       get_greeting,
+                       get_stock_prices,
+                       get_top_transactions,
+                       read_excel,
+                       DATA_FILE_PATH)
 
 
 def test_read_excel_success():
@@ -17,7 +23,7 @@ def test_read_excel_success():
         result = read_excel()
 
         pd.testing.assert_frame_equal(result, test_df)
-        mock_read_excel.assert_called_once_with("../data/operations.xlsx")
+        mock_read_excel.assert_called_once_with(DATA_FILE_PATH)
 
 
 def test_read_excel_file_not_found():

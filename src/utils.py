@@ -12,6 +12,7 @@ from src.decorators import log_function_call
 load_dotenv()
 
 USER_SETTING = os.path.join(os.path.dirname(__file__), "..", "user_settings.json")
+DATA_FILE_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "operations.xlsx")
 
 
 @log_function_call
@@ -20,8 +21,7 @@ def read_excel() -> pd.DataFrame:
     from XLSX to DataFrame
     :return: DataFrame с данными о транзакция
     """
-    file_path = os.path.join(os.path.dirname(__file__), "..", "data", "operations.xlsx")
-    excel_data = pd.read_excel(file_path)
+    excel_data = pd.read_excel(DATA_FILE_PATH)
     return excel_data
 
 
