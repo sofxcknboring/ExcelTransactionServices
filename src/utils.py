@@ -1,23 +1,31 @@
 import datetime
 import json
 import os
+import re
 
 import pandas as pd
 import requests
 from dotenv import load_dotenv
 
+from src.decorators import log_function_call
+
 load_dotenv()
 
+USER_SETTING = os.path.join(os.path.dirname(__file__), "..", "user_settings.json")
 
+
+@log_function_call
 def read_excel() -> pd.DataFrame:
     """
     from XLSX to DataFrame
     :return: DataFrame с данными о транзакция
     """
-    excel_data = pd.read_excel("../data/operations.xlsx")
+    file_path = os.path.join(os.path.dirname(__file__), "..", "data", "operations.xlsx")
+    excel_data = pd.read_excel(file_path)
     return excel_data
 
 
+@log_function_call
 def get_greeting() -> str:
     """
     Приветствие в зависимости от текущего времени.
@@ -32,6 +40,7 @@ def get_greeting() -> str:
     )
 
 
+@log_function_call
 def get_cards(transactions: pd.DataFrame) -> list[dict]:
     """
     Группирует карты и возвращает общую сумму расходов по каждой карте.
@@ -46,11 +55,12 @@ def get_cards(transactions: pd.DataFrame) -> list[dict]:
     cards["cashback"] = cards["total_spent"] / 100
 
     result_cards_list = []
+
     for card_number, row in cards.iterrows():
         if row["total_spent"] > 0:
             result_cards_list.append(
                 {
-                    "last_digits": card_number,
+                    "last_digits": re.sub(r"\*+", "", card_number),
                     "total_spent": f"{row['total_spent']:.2f}",
                     "cashback": f"{row['cashback']:.2f}",
                 }
@@ -59,6 +69,7 @@ def get_cards(transactions: pd.DataFrame) -> list[dict]:
     return result_cards_list
 
 
+@log_function_call
 def get_top_transactions(transactions: pd.DataFrame) -> list[dict]:
     """
     Топ 5 транзакций по сумме платежа.
@@ -84,6 +95,7 @@ def get_top_transactions(transactions: pd.DataFrame) -> list[dict]:
     return result
 
 
+@log_function_call
 def get_currency_rates() -> list[dict]:
     """
     Получить текущий курс валют
@@ -93,7 +105,7 @@ def get_currency_rates() -> list[dict]:
       "rate": 73.21
     },...]
     """
-    with open("./user_settings.json", "r") as file:
+    with open(USER_SETTING, "r") as file:
         currencies = json.load(file)["user_currencies"]
 
     url = "https://api.apilayer.com/exchangerates_data/convert"
@@ -114,6 +126,7 @@ def get_currency_rates() -> list[dict]:
     return result
 
 
+@log_function_call
 def get_stock_prices() -> list[dict]:
     """
     Стоимость акций из S&P500.
@@ -124,7 +137,7 @@ def get_stock_prices() -> list[dict]:
     },...]
     """
     try:
-        with open("./user_settings.json", "r") as file:
+        with open(USER_SETTING) as file:
             stocks = json.load(file)["user_stocks"]
     except (FileNotFoundError, json.JSONDecodeError) as e:
         raise ValueError("Ошибка при чтении файла user_settings.json") from e

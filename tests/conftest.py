@@ -1,4 +1,5 @@
 import json
+import os
 
 import pandas as pd
 import pytest
@@ -7,7 +8,8 @@ import pytest
 @pytest.fixture
 def transactions_data():
     data = {
-        "Номер карты": ["1234", "1234", "5678", "5678", "5678"],
+        "Дата операции": ["20.12.2021", "21.12.2021", "22.12.2021", "23.12.2021", "24.12.2021"],
+        "Номер карты": ["**1234", "**1234", "**5678", "**5678", "**5678"],
         "Сумма платежа": [-100, -200, -50, -150, -300],
         "Дата платежа": ["20.12.2021", "21.12.2021", "22.12.2021", "23.12.2021", "24.12.2021"],
         "Категория": ["Супермаркеты", "Рестораны", "Супермаркеты", "Развлечения", "Супермаркеты"],
@@ -24,3 +26,10 @@ def mock_user_settings():
             "user_stocks": ["AAPL", "GOOGL"],
         }
     )
+
+
+@pytest.fixture(autouse=True)
+def cleanup():
+    yield
+    if os.path.exists("reports.json"):
+        os.remove("reports.json")
