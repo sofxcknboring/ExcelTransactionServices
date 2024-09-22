@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import re
+import time
 
 import pandas as pd
 import requests
@@ -123,6 +124,10 @@ def get_currency_rates() -> list[dict]:
         if response.status_code == 200:
             api_response = response.json()
             result.append({"currency": curr, "rate": f"{api_response['result']:.2f}"})
+            time.sleep(5)
+        else:
+            print(f"Error fetching data for {curr}: {response.status_code}")
+            result.append({"currency": curr, "rate": "Error"})
     return result
 
 
@@ -153,6 +158,7 @@ def get_stock_prices() -> list[dict]:
             api_response = response.json()
             if api_response:
                 result.append({"stock": stock, "price": f"{float(api_response[0]['price']):.2f}"})
+                time.sleep(5)
             else:
                 raise ValueError(f"Пустой ответ для акции: {stock}")
         except requests.exceptions.RequestException as e:

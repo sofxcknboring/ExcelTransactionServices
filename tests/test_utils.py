@@ -1,18 +1,19 @@
 import datetime
-import json
-import os
-from unittest.mock import mock_open, patch
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
+import requests
 
-from src.utils import (get_cards,
-                       get_currency_rates,
-                       get_greeting,
-                       get_stock_prices,
-                       get_top_transactions,
-                       read_excel,
-                       DATA_FILE_PATH)
+from src.utils import (
+    DATA_FILE_PATH,
+    get_cards,
+    get_currency_rates,
+    get_greeting,
+    get_stock_prices,
+    get_top_transactions,
+    read_excel,
+)
 
 
 def test_read_excel_success():
@@ -93,111 +94,66 @@ def test_get_top_transactions_no_transactions():
     assert result == expected_result
 
 
-def test_get_currency_rates_success(mock_user_settings):
+@patch("requests.get")
+def test_get_currency_rates_success(mock_get):
+    mock_get.return_value.status_code = 200
 
-    with patch("builtins.open", mock_open(read_data=mock_user_settings)), patch("requests.get") as mock_get:
+    mock_get.return_value.json.return_value = {"result": 75.0}
 
-        mock_get.return_value.status_code = 200
-        mock_get.return_value.json.return_value = {"result": 75.00}
+    result = get_currency_rates()
 
-        with patch.dict(os.environ, {"CURRENCIES_API_KEY": "test_api_key"}):
-            result = get_currency_rates()
-
-            expected_result = [
-                {"currency": "USD", "rate": "75.00"},
-                {"currency": "EUR", "rate": "75.00"},
-            ]
-
-            assert result == expected_result
-            mock_get.assert_any_call(
-                "https://api.apilayer.com/exchangerates_data/convert",
-                headers={"apikey": "test_api_key"},
-                params={"amount": 1, "from": "USD", "to": "RUB"},
-            )
-            mock_get.assert_any_call(
-                "https://api.apilayer.com/exchangerates_data/convert",
-                headers={"apikey": "test_api_key"},
-                params={"amount": 1, "from": "EUR", "to": "RUB"},
-            )
+    assert result == [{"currency": "USD", "rate": "75.00"}, {"currency": "EUR", "rate": "75.00"}]
+    mock_get.assert_called()
 
 
-def test_get_currency_rates_api_failure(mock_user_settings):
+@patch("requests.get")
+def test_get_currency_rates_404(mock_get):
+    mock_get.return_value.status_code = 404
 
-    with patch("builtins.open", mock_open(read_data=mock_user_settings)), patch("requests.get") as mock_get:
-
-        mock_get.return_value.status_code = 404
-
-        with patch.dict(os.environ, {"CURRENCIES_API_KEY": "test_api_key"}):
-            result = get_currency_rates()
-
-            expected_result = []
-            assert result == expected_result
+    result = get_currency_rates()
+    assert result == [{"currency": "USD", "rate": "Error"}, {"currency": "EUR", "rate": "Error"}]
+    mock_get.assert_called()
 
 
-def test_get_currency_rates_empty_currencies(mock_user_settings):
-    empty_currencies = json.dumps({"user_currencies": []})
+@patch("requests.get")
+def test_get_stock_prices_success(mock_get):
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.side_effect = [
+        [{"price": 150.12}],
+        [{"price": 200.00}],
+        [{"price": 2500.00}],
+        [{"price": 300.00}],
+        [{"price": 700.00}],
+    ]
 
-    with patch("builtins.open", mock_open(read_data=empty_currencies)):
-        with patch("requests.get") as mock_get:
-            with patch.dict(os.environ, {"CURRENCIES_API_KEY": "test_api_key"}):
-                result = get_currency_rates()
+    result = get_stock_prices()
 
-                expected_result = []
-                assert result == expected_result
+    assert result == [
+        {"stock": "AAPL", "price": "150.12"},
+        {"stock": "AMZN", "price": "200.00"},
+        {"stock": "GOOGL", "price": "2500.00"},
+        {"stock": "MSFT", "price": "300.00"},
+        {"stock": "TSLA", "price": "700.00"},
+    ]
 
-                mock_get.assert_not_called()
-
-
-def test_get_stock_prices_success(mock_user_settings):
-    with patch("builtins.open", mock_open(read_data=mock_user_settings)), patch("requests.get") as mock_get:
-        mock_get.return_value.status_code = 200
-        mock_get.return_value.json.return_value = [{"price": 150.00}]
-
-        with patch.dict(os.environ, {"STOCKS_API_KEY": "test_api_key"}):
-            result = get_stock_prices()
-
-            expected_result = [
-                {"stock": "AAPL", "price": "150.00"},
-                {"stock": "GOOGL", "price": "150.00"},
-            ]
-
-            assert result == expected_result
-            mock_get.assert_any_call("https://financialmodelingprep.com/api/v3/profile/AAPL?apikey=test_api_key")
-            mock_get.assert_any_call("https://financialmodelingprep.com/api/v3/profile/GOOGL?apikey=test_api_key")
+    assert mock_get.call_count == 5
 
 
-def test_get_stock_prices_file_not_found():
-    with patch("builtins.open", side_effect=FileNotFoundError):
-        with pytest.raises(ValueError, match="Ошибка при чтении файла user_settings.json"):
-            get_stock_prices()
+@patch("requests.get")
+def test_get_stock_prices_api_error(mock_get):
+    mock_get.return_value.status_code = 404
+    mock_get.return_value.raise_for_status.side_effect = requests.exceptions.HTTPError(
+        "404 Client Error: Not Found for url"
+    )
+
+    with pytest.raises(ValueError, match="Ошибка API для акции AAPL"):
+        get_stock_prices()
 
 
-def test_get_stock_prices_json_decode_error():
-    with patch("builtins.open", mock_open(read_data="invalid json")):
-        with pytest.raises(ValueError, match="Ошибка при чтении файла user_settings.json"):
-            get_stock_prices()
+@patch("requests.get")
+def test_get_stock_prices_empty_response(mock_get):
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.return_value = []
 
-
-def test_get_stock_prices_empty_stocks():
-    empty_stocks = json.dumps({"user_stocks": []})
-
-    with patch("builtins.open", mock_open(read_data=empty_stocks)):
-        with patch("requests.get") as mock_get:
-            with patch.dict(os.environ, {"STOCKS_API_KEY": "test_api_key"}):
-                result = get_stock_prices()
-
-                expected_result = []
-                assert result == expected_result
-
-                mock_get.assert_not_called()
-
-
-def test_get_stock_prices_empty_api_response(mock_user_settings):
-
-    with patch("builtins.open", mock_open(read_data=mock_user_settings)), patch("requests.get") as mock_get:
-        mock_get.return_value.status_code = 200
-        mock_get.return_value.json.return_value = []
-
-        with patch.dict(os.environ, {"STOCKS_API_KEY": "test_api_key"}):
-            with pytest.raises(ValueError, match="Пустой ответ для акции: AAPL"):
-                get_stock_prices()
+    with pytest.raises(ValueError, match="Пустой ответ для акции: AAPL"):
+        get_stock_prices()

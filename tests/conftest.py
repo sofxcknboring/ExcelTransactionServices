@@ -1,4 +1,3 @@
-import json
 import os
 
 import pandas as pd
@@ -16,16 +15,6 @@ def transactions_data():
         "Описание": ["Лента", "Пицца", "Ашан", "Кино", "Магнит"],
     }
     return pd.DataFrame(data)
-
-
-@pytest.fixture
-def mock_user_settings():
-    return json.dumps(
-        {
-            "user_currencies": ["USD", "EUR"],
-            "user_stocks": ["AAPL", "GOOGL"],
-        }
-    )
 
 
 @pytest.fixture(autouse=True)
