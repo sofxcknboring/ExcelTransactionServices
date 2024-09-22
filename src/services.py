@@ -16,7 +16,6 @@ def search_transactions(transactions: pd.DataFrame, keyword: str) -> str:
     """
     df = transactions
     pattern = re.compile(keyword, re.IGNORECASE)
-    filtered_df = df[df["Описание"].str.contains(pattern, na=False) |
-                     df["Категория"].str.contains(pattern, na=False)]
+    filtered_df = df[df["Описание"].str.contains(pattern, na=False) | df["Категория"].str.contains(pattern, na=False)]
     result = filtered_df.to_dict(orient="records")
     return json.dumps(result, ensure_ascii=False, indent=4)

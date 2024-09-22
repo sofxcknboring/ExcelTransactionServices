@@ -39,4 +39,3 @@ def get_homepage_json(filter_date: str) -> str:
     }
 
     return json.dumps(result_data, ensure_ascii=False)
-

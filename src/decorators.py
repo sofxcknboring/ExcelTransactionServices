@@ -1,7 +1,6 @@
 import logging
 from functools import wraps
 
-
 logger = logging.getLogger(__name__)
 console_handler = logging.StreamHandler()
 console_formatter = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")

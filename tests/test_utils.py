@@ -5,15 +5,8 @@ import pandas as pd
 import pytest
 import requests
 
-from src.utils import (
-    DATA_FILE_PATH,
-    get_cards,
-    get_currency_rates,
-    get_greeting,
-    get_stock_prices,
-    get_top_transactions,
-    read_excel,
-)
+from src.utils import (DATA_FILE_PATH, get_cards, get_currency_rates, get_greeting, get_stock_prices,
+                       get_top_transactions, read_excel)
 
 
 def test_read_excel_success():
